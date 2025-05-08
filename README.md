@@ -64,4 +64,3 @@ This project uses pre-commit to maintain code quality. The following hooks are i
 - isort: Sorts imports
 - flake8: Lints Python code
 - mypy: Type checks Python code
-

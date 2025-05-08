@@ -2,10 +2,11 @@
 """
 Authentication token management for RepoWalker.
 """
-import os
-from colorama import Fore, Style
 import getpass
+import os
 from pathlib import Path
+
+from colorama import Fore, Style
 
 TOKEN_ENV_VAR = "REPOWALKER_AUTH_TOKEN"
 

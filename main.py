@@ -2,16 +2,16 @@
 """
 RepoWalker - Walk through GitHub repositories that you own or from your organizations.
 """
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
-from dotenv import load_dotenv
 from colorama import Fore, Style
+from dotenv import load_dotenv
 from tqdm import tqdm
 
 # Load .env file if it exists
