@@ -19,7 +19,7 @@ Once you have set up your token, you can use the main script to list your reposi
 # List repositories with interactive organization selection
 python main.py
 
-# Show language statistics
+# Show language statistics with visual bar graph
 python main.py --languages
 
 # Save repository data to a JSON file

@@ -298,7 +298,7 @@ def display_repository_summary(repos: List[Dict[str, Any]], limit: Optional[int]
 
 
 def display_repository_languages(repos: List[Dict[str, Any]]) -> None:
-    """Display language statistics for repositories.
+    """Display language statistics for repositories with a bar graph.
 
     Args:
         repos: List of repository information
@@ -316,10 +316,70 @@ def display_repository_languages(repos: List[Dict[str, Any]]) -> None:
     # Sort by count
     sorted_languages = sorted(language_count.items(), key=lambda x: x[1], reverse=True)
 
-    print(f"\n{Fore.GREEN}Language distribution:{Style.RESET_ALL}")
+    # Calculate the longest language name for alignment
+    max_lang_length = max([len(lang) for lang, _ in sorted_languages], default=10)
+    max_count_length = max([len(str(count)) for _, count in sorted_languages], default=3)
+
+    # Define bar graph settings
+    bar_width = 40  # Maximum width of the bar in characters
+    bar_char = "█"  # Character used for the bar
+
+    # Print header
+    print(
+        f"\n{Fore.CYAN}╔{'═' * (max_lang_length + max_count_length + bar_width + 15)}╗{Style.RESET_ALL}"
+    )
+    print(
+        f"{Fore.CYAN}║ {Fore.GREEN}LANGUAGE DISTRIBUTION"
+        f"{' ' * (max_lang_length + max_count_length + bar_width - 12)}     {Fore.CYAN}║{Style.RESET_ALL}"
+    )
+    print(
+        f"{Fore.CYAN}╠{'═' * (max_lang_length + max_count_length + bar_width + 15)}╣{Style.RESET_ALL}"
+    )
+
+    # Calculate column header positions for alignment
+    lang_header = "LANGUAGE"
+    count_header = "#"
+    pct_header = "%"
+    bar_header = "DISTRIBUTION"
+
+    # Print column headers
+    print(
+        f"{Fore.CYAN}║ {Fore.YELLOW}{lang_header}{' ' * (max_lang_length - len(lang_header) + 2)}"
+        f"{count_header}{' ' * (max_count_length - len(count_header) + 2)}"
+        f" {pct_header}{' ' * 4}{bar_header}{' ' * (bar_width - len(bar_header) - 2)}"
+        f"{Fore.CYAN}      ║{Style.RESET_ALL}"
+    )
+    print(
+        f"{Fore.CYAN}╠{'─' * (max_lang_length + max_count_length + bar_width + 15)}╣{Style.RESET_ALL}"
+    )
+
+    # Print language statistics with bar graph
     for language, count in sorted_languages:
         percentage = (count / len(repos)) * 100
-        print(f"{language}: {count} ({percentage:.1f}%)")
+        # Calculate the bar length proportional to the percentage (max is bar_width)
+        bar_length = int((percentage / 100) * bar_width)
+
+        # Determine color based on percentage
+        if percentage > 50:
+            bar_color = Fore.GREEN
+        elif percentage > 20:
+            bar_color = Fore.YELLOW
+        else:
+            bar_color = Fore.RED
+
+        # Format the bar with color
+        bar = f"{bar_color}{bar_char * bar_length}{Style.RESET_ALL}"
+
+        # Print the formatted line with aligned columns
+        print(
+            f"{Fore.CYAN}║ {Fore.WHITE}{language:{max_lang_length}} {count:{max_count_length}} "
+            f"{percentage:6.1f}% {bar}{' ' * (bar_width - bar_length + 4)}{Fore.CYAN}║{Style.RESET_ALL}"
+        )
+
+    # Print footer
+    print(
+        f"{Fore.CYAN}╚{'═' * (max_lang_length + max_count_length + bar_width + 15)}╝{Style.RESET_ALL}"
+    )
 
 
 def parse_args() -> argparse.Namespace:
