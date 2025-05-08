@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
 Authentication token management for RepoWalker.
+
+This script handles the authentication token for RepoWalker.
+It prompts the user for a token, stores it in a .env file, and exports it
+to the environment variable for the current session.
+Usage:
+    python scripts/auth.py
 """
 import getpass
 import os
@@ -40,19 +46,21 @@ def store_token(token):
         f.writelines(lines)
 
     print(f"{Fore.GREEN}Token saved to .env file. To use in your shell, run:{Style.RESET_ALL}")
-    print(f"    export {TOKEN_ENV_VAR}=\"{token}\"")
+    print(f'    export {TOKEN_ENV_VAR}="{token}"')
     print(f"{Fore.GREEN}Or add this to your ~/.bashrc or ~/.zshrc file{Style.RESET_ALL}")
 
 
 def export_token(token):
     """Export token to environment variable for current session."""
     os.environ[TOKEN_ENV_VAR] = token
-    print(f"{Fore.GREEN}Token exported to environment variable "
-          f"{TOKEN_ENV_VAR} for this session{Style.RESET_ALL}")
+    print(
+        f"{Fore.GREEN}Token exported to environment variable "
+        f"{TOKEN_ENV_VAR} for this session{Style.RESET_ALL}"
+    )
 
 
 def main():
-    """Main function to get and store authentication token."""
+    """Get and store authentication token."""
     # Check if token is already in environment
     token = os.environ.get(TOKEN_ENV_VAR)
 

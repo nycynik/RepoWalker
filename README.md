@@ -48,13 +48,19 @@ To set up the development environment with pre-commit hooks:
 # Install dependencies and pre-commit hooks
 python scripts/setup_dev.py
 
-# Run pre-commit on all files
+# Run pre-commit on all files manually (helpful when setting up initially)
 pre-commit run --all-files
 ```
 
 ## Pre-commit hooks
 
-This project uses pre-commit to maintain code quality. The following hooks are installed:
+This project uses pre-commit to maintain code quality. The hooks run automatically when you commit changes, ensuring that all code meets the project's quality standards.
+
+If a hook fails during a commit:
+1. The failed files will be modified by the hooks to meet the standards
+2. You'll need to add those changes and commit again
+
+The following hooks are installed and run automatically before each commit:
 
 - trailing-whitespace: Trims trailing whitespace
 - end-of-file-fixer: Makes sure files end with a newline
@@ -63,4 +69,3 @@ This project uses pre-commit to maintain code quality. The following hooks are i
 - black: Formats Python code
 - isort: Sorts imports
 - flake8: Lints Python code
-- mypy: Type checks Python code

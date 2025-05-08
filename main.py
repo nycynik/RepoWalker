@@ -1,18 +1,32 @@
 #!/usr/bin/env python3
 """
-RepoWalker - Walk through GitHub repositories that you own or from your organizations.
+RepoWalker.
+
+Walk through GitHub repositories that you own or from your organizations.
+
+This script fetches repositories from the authenticated user's GitHub account or
+from a specified organization. It displays a summary of the repositories, including
+the number of stars, forks, and languages used. It also allows saving the repository
+data to a JSON file.
+Usage:
+    python main.py [OPTIONS]
+Options:
+    -l, --languages        Show language statistics
+    -o, --output TEXT      Save repository data to JSON file
+    -m, --limit INTEGER    Limit the number of repositories to fetch (useful for testing)
+    --org TEXT             Organization name (skip the organization selection prompt)
+    --personal             Use personal repositories (skip the organization selection prompt)
 """
 import argparse
 import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import requests
 from colorama import Fore, Style
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 # Load .env file if it exists
 load_dotenv()
@@ -38,11 +52,13 @@ class GitHubAPI:
             sys.exit(1)
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "RepoWalker",
-        })
+        self.session.headers.update(
+            {
+                "Authorization": f"token {self.token}",
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "RepoWalker",
+            }
+        )
 
     def get_user(self) -> Dict[str, Any]:
         """Get information about the authenticated user.
@@ -84,7 +100,9 @@ class GitHubAPI:
 
         return organizations
 
-    def list_user_repositories(self, limit: Optional[int] = None, per_page: int = 100) -> List[Dict[str, Any]]:
+    def list_user_repositories(
+        self, limit: Optional[int] = None, per_page: int = 100
+    ) -> List[Dict[str, Any]]:
         """List repositories for the authenticated user.
 
         Args:
@@ -126,11 +144,15 @@ class GitHubAPI:
 
             # If we have more pages, print a progress indicator
             if len(page_repos) == per_page:
-                print(f"{Fore.BLUE}Fetched {len(repositories)} repositories so far...{Style.RESET_ALL}")
+                print(
+                    f"{Fore.BLUE}Fetched {len(repositories)} repositories so far...{Style.RESET_ALL}"
+                )
 
         return repositories
 
-    def list_organization_repositories(self, org_name: str, limit: Optional[int] = None, per_page: int = 100) -> List[Dict[str, Any]]:
+    def list_organization_repositories(
+        self, org_name: str, limit: Optional[int] = None, per_page: int = 100
+    ) -> List[Dict[str, Any]]:
         """List repositories for a specific organization.
 
         Args:
@@ -144,7 +166,9 @@ class GitHubAPI:
         repositories = []
         page = 1
 
-        print(f"{Fore.GREEN}Fetching repositories for organization {Fore.CYAN}{org_name}{Style.RESET_ALL}...")
+        print(
+            f"{Fore.GREEN}Fetching repositories for organization {Fore.CYAN}{org_name}{Style.RESET_ALL}..."
+        )
 
         while True:
             response = self.session.get(
@@ -173,7 +197,9 @@ class GitHubAPI:
 
             # If we have more pages, print a progress indicator
             if len(page_repos) == per_page:
-                print(f"{Fore.BLUE}Fetched {len(repositories)} repositories so far...{Style.RESET_ALL}")
+                print(
+                    f"{Fore.BLUE}Fetched {len(repositories)} repositories so far...{Style.RESET_ALL}"
+                )
 
         return repositories
 
@@ -204,11 +230,16 @@ def select_organization(organizations: List[Dict[str, Any]]) -> Optional[str]:
     print(f"0. {Fore.CYAN}Personal Repositories{Style.RESET_ALL}")
 
     for i, org in enumerate(organizations, 1):
-        print(f"{i}. {Fore.CYAN}{org['login']}{Style.RESET_ALL} - {org.get('description', 'No description')}")
+        print(
+            f"{i}. {Fore.CYAN}{org['login']}{Style.RESET_ALL} - {org.get('description', 'No description')}"
+        )
 
     while True:
         try:
-            choice = input(f"\n{Fore.GREEN}Select an organization (0-{len(organizations)}) or press Enter for personal repos: {Style.RESET_ALL}")
+            choice = input(
+                f"\n{Fore.GREEN}Select an organization (0-{len(organizations)}) or press Enter for personal "
+                f"repos: {Style.RESET_ALL}"
+            )
 
             # Default to personal repositories
             if not choice.strip():
@@ -220,7 +251,10 @@ def select_organization(organizations: List[Dict[str, Any]]) -> Optional[str]:
             elif 1 <= choice_num <= len(organizations):
                 return organizations[choice_num - 1]["login"]
             else:
-                print(f"{Fore.RED}Invalid choice. Please select a number between 0 and {len(organizations)}.{Style.RESET_ALL}")
+                print(
+                    f"{Fore.RED}Invalid choice. Please select a number between 0 and {len(organizations)}."
+                    f"{Style.RESET_ALL}"
+                )
         except ValueError:
             print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
 
@@ -240,7 +274,7 @@ def display_repository_summary(repos: List[Dict[str, Any]], limit: Optional[int]
     sorted_repos = sorted(
         repos,
         key=lambda r: (r.get("stargazers_count", 0) + r.get("watchers_count", 0)),
-        reverse=True
+        reverse=True,
     )
 
     display_limit = min(limit, len(repos)) if limit else len(repos)
@@ -295,31 +329,25 @@ def parse_args() -> argparse.Namespace:
         Parsed arguments
     """
     parser = argparse.ArgumentParser(description="Walk through GitHub repositories")
+    parser.add_argument("--languages", "-l", action="store_true", help="Show language statistics")
+    parser.add_argument("--output", "-o", help="Save repository data to JSON file")
     parser.add_argument(
-        "--languages", "-l", action="store_true",
-        help="Show language statistics"
+        "--limit",
+        "-m",
+        type=int,
+        help="Limit the number of repositories to fetch (useful for testing)",
     )
+    parser.add_argument("--org", help="Organization name (skip the organization selection prompt)")
     parser.add_argument(
-        "--output", "-o",
-        help="Save repository data to JSON file"
-    )
-    parser.add_argument(
-        "--limit", "-m", type=int,
-        help="Limit the number of repositories to fetch (useful for testing)"
-    )
-    parser.add_argument(
-        "--org",
-        help="Organization name (skip the organization selection prompt)"
-    )
-    parser.add_argument(
-        "--personal", action="store_true",
-        help="Use personal repositories (skip the organization selection prompt)"
+        "--personal",
+        action="store_true",
+        help="Use personal repositories (skip the organization selection prompt)",
     )
     return parser.parse_args()
 
 
 def main() -> None:
-    """Main function."""
+    """Process all the repositories."""
     args = parse_args()
 
     # Create GitHub API client
@@ -334,7 +362,9 @@ def main() -> None:
 
         # Handle organization selection
         if args.personal:
-            print(f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}")
+            print(
+                f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}"
+            )
         elif args.org:
             org_name = args.org
             print(f"{Fore.GREEN}\nUsing organization: {Fore.CYAN}{org_name}{Style.RESET_ALL}")
@@ -347,11 +377,17 @@ def main() -> None:
                 org_name = select_organization(organizations)
 
                 if org_name:
-                    print(f"{Fore.GREEN}\nSelected organization: {Fore.CYAN}{org_name}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.GREEN}\nSelected organization: {Fore.CYAN}{org_name}{Style.RESET_ALL}"
+                    )
                 else:
-                    print(f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}"
+                    )
             else:
-                print(f"{Fore.YELLOW}\nNo organizations found. Using personal repositories.{Style.RESET_ALL}")
+                print(
+                    f"{Fore.YELLOW}\nNo organizations found. Using personal repositories.{Style.RESET_ALL}"
+                )
 
         # Fetch repositories based on selection
         if org_name:
