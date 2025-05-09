@@ -13,29 +13,60 @@ python scripts/auth.py
 
 ## Usage
 
-Once you have set up your token, you can use the main script to list your repositories:
+Once you have set up your token, you can use the RepoWalker in two modes:
+
+### 1. List Repositories
+
+View information about your repositories:
 
 ```bash
 # List repositories with interactive organization selection
-python main.py
+python process.py list
 
 # Show language statistics with visual bar graph
-python main.py --languages
+python process.py list --languages
 
 # Save repository data to a JSON file
-python main.py --output repos.json
+python process.py list --output repos.json
 
 # List only repositories you own (skip organization selection)
-python main.py --personal
+python process.py list --personal
 
 # List all repositories you have access to (including collaborations)
-python main.py --all
+python process.py list --all
 
 # List repositories for a specific organization
-python main.py --org your-org-name
+python process.py list --org your-org-name
 
 # Limit the number of repositories (useful for testing)
-python main.py --limit 5
+python process.py list --limit 5
+```
+
+### 2. Process Repositories
+
+Process repositories to add AI-generated enhancements:
+
+```bash
+# Process personal repositories with interactive selection
+python process.py process
+
+# Process only your personal repositories
+python process.py process --personal
+
+# Process repositories from a specific organization
+python process.py process --org your-org-name
+
+# Specify a different file to generate
+python process.py process --file CONTRIBUTING.md
+
+# Use a different branch name prefix
+python process.py process --branch-prefix feature/docs
+
+# Keep local repository copies after processing
+python process.py process --no-cleanup
+
+# Process only a few repositories (for testing)
+python process.py process --limit 2
 ```
 
 By default, the script will:
