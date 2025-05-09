@@ -21,6 +21,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -100,10 +101,65 @@ class GitHubAPI:
 
         return organizations
 
+    def list_owned_repositories(
+        self, limit: Optional[int] = None, per_page: int = 100
+    ) -> List[Dict[str, Any]]:
+        """List repositories owned by the authenticated user.
+
+        Args:
+            limit: Maximum number of repositories to return
+            per_page: Number of repositories per page
+
+        Returns:
+            List of repositories owned by the user
+        """
+        # First get the authenticated user's login name
+        user = self.get_user()
+        username = user["login"]
+
+        repositories = []
+        page = 1
+
+        print(f"{Fore.GREEN}Fetching repositories owned by you...{Style.RESET_ALL}")
+
+        while True:
+            response = self.session.get(
+                f"{self.BASE_URL}/users/{username}/repos",
+                params={
+                    "per_page": per_page,
+                    "page": page,
+                    "sort": "updated",
+                    "direction": "desc",
+                    "type": "owner",  # Only fetch repos the user owns
+                },
+            )
+            response.raise_for_status()
+
+            page_repos = response.json()
+            if not page_repos:
+                break
+
+            repositories.extend(page_repos)
+
+            # If we've reached the limit, stop fetching
+            if limit and len(repositories) >= limit:
+                repositories = repositories[:limit]
+                break
+
+            page += 1
+
+            # If we have more pages, print a progress indicator
+            if len(page_repos) == per_page:
+                print(
+                    f"{Fore.BLUE}Fetched {len(repositories)} repositories so far...{Style.RESET_ALL}"
+                )
+
+        return repositories
+
     def list_user_repositories(
         self, limit: Optional[int] = None, per_page: int = 100
     ) -> List[Dict[str, Any]]:
-        """List repositories for the authenticated user.
+        """List all repositories the authenticated user has access to.
 
         Args:
             limit: Maximum number of repositories to return
@@ -115,7 +171,7 @@ class GitHubAPI:
         repositories = []
         page = 1
 
-        print(f"{Fore.GREEN}Fetching your personal repositories...{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Fetching all accessible repositories...{Style.RESET_ALL}")
 
         while True:
             response = self.session.get(
@@ -283,18 +339,93 @@ def display_repository_summary(repos: List[Dict[str, Any]], limit: Optional[int]
     print(f"\n{Fore.GREEN}Found {len(repos)} repositories:{Style.RESET_ALL}\n")
 
     for i, repo in enumerate(repos_to_display, 1):
-        stars = repo.get("stargazers_count", 0)
-        forks = repo.get("forks_count", 0)
-        language = repo.get("language", "Unknown")
-
-        print(f"{i:2d}. {Fore.CYAN}{repo['full_name']}{Style.RESET_ALL}")
-        print(f"    Description: {repo.get('description', 'No description')}")
-        print(f"    Language: {language} | Stars: {stars} | Forks: {forks}")
-        print(f"    URL: {repo['html_url']}")
-        print()
+        display_respository_details(repo, str(i))
 
     if len(repos) > display_limit:
         print(f"... and {len(repos) - display_limit} more repositories.")
+
+
+def format_relative_time(time_str: str) -> str:
+    """Format a time string into a human-readable relative time.
+
+    Args:
+        time_str: ISO-formatted time string from GitHub API
+
+    Returns:
+        Human-readable relative time (e.g., "2 days ago")
+    """
+    try:
+        # Parse the GitHub timestamp format
+        time_obj = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.utcnow()
+
+        # Calculate the difference
+        diff = now - time_obj
+
+        # Convert to appropriate units
+        seconds = diff.total_seconds()
+        minutes = seconds // 60
+        hours = minutes // 60
+        days = diff.days
+        months = days // 30
+        years = days // 365
+
+        if years > 0:
+            return f"{int(years)} year{'s' if years != 1 else ''} ago"
+        elif months > 0:
+            return f"{int(months)} month{'s' if months != 1 else ''} ago"
+        elif days > 0:
+            return f"{int(days)} day{'s' if days != 1 else ''} ago"
+        elif hours > 0:
+            return f"{int(hours)} hour{'s' if hours != 1 else ''} ago"
+        elif minutes > 0:
+            return f"{int(minutes)} minute{'s' if minutes != 1 else ''} ago"
+        else:
+            return "just now"
+    except Exception:
+        # Fallback to original string if parsing fails
+        return time_str
+
+
+def display_respository_details(repo: Dict[str, Any], index: str = None) -> None:
+    """Display detailed information about a repository.
+
+    Args:
+        repo: Repository information
+        index: Optional index for listing repositories
+    """
+    bar = f"{Fore.LIGHTBLACK_EX} | {Style.RESET_ALL}"
+
+    stars = repo.get("stargazers_count", 0)
+    forks = repo.get("forks_count", 0)
+    language = repo.get("language", "Unknown")
+    number = " " * 3 if not index else f"{int(index):2d}."
+
+    # Format the timestamps
+    updated_at = format_relative_time(repo.get("updated_at", ""))
+    created_at = format_relative_time(repo.get("created_at", ""))
+
+    # Format for size
+    size_kb = repo.get("size", 0)
+    if size_kb >= 1024:
+        size_str = f"{size_kb/1024:.1f} MB"
+    else:
+        size_str = f"{size_kb} KB"
+
+    print(f"{number} {Fore.CYAN}{repo['full_name']}{Style.RESET_ALL}")
+    print(
+        f"    {Fore.GREEN}Description:{Style.RESET_ALL} {repo.get('description', 'No description')}"
+    )
+    print(
+        f"    {Fore.GREEN}Language:{Style.RESET_ALL} {language}{bar}{Fore.GREEN}Stars:{Style.RESET_ALL} {stars} "
+        f"{bar} {Fore.GREEN}Forks:{Style.RESET_ALL} {forks}{bar}{Fore.GREEN}Size:{Style.RESET_ALL} {size_str}"
+    )
+    print(
+        f"    {Fore.GREEN}Updated:{Style.RESET_ALL} {updated_at}{bar}{Fore.GREEN}"
+        f"Created:{Style.RESET_ALL} {created_at}{Style.RESET_ALL}"
+    )
+    print(f"    {Fore.GREEN}URL:{Style.RESET_ALL} {repo['html_url']}")
+    print()
 
 
 def display_repository_languages(repos: List[Dict[str, Any]]) -> None:
@@ -401,7 +532,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--personal",
         action="store_true",
-        help="Use personal repositories (skip the organization selection prompt)",
+        help="Show only repositories owned by you (default when no organization is selected)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Show all repositories you have access to, including collaborations and organization repositories",
     )
     return parser.parse_args()
 
@@ -420,16 +556,23 @@ def main() -> None:
 
         org_name = None
 
-        # Handle organization selection
-        if args.personal:
+        # Handle repository selection
+        if args.all:
             print(
-                f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}"
+                f"{Fore.GREEN}\nFetching {Fore.CYAN}all accessible{Fore.GREEN} repositories.{Style.RESET_ALL}"
             )
+            repositories = github.list_user_repositories(limit=args.limit)
+        elif args.personal:
+            print(
+                f"{Fore.GREEN}\nFetching {Fore.CYAN}personal{Fore.GREEN} repositories (owned by you).{Style.RESET_ALL}"
+            )
+            repositories = github.list_owned_repositories(limit=args.limit)
         elif args.org:
             org_name = args.org
             print(f"{Fore.GREEN}\nUsing organization: {Fore.CYAN}{org_name}{Style.RESET_ALL}")
+            repositories = github.list_organization_repositories(org_name, limit=args.limit)
         else:
-            # List organizations
+            # List organizations and prompt for selection
             organizations = github.list_organizations()
 
             if organizations:
@@ -440,20 +583,18 @@ def main() -> None:
                     print(
                         f"{Fore.GREEN}\nSelected organization: {Fore.CYAN}{org_name}{Style.RESET_ALL}"
                     )
+                    repositories = github.list_organization_repositories(org_name, limit=args.limit)
                 else:
                     print(
-                        f"{Fore.GREEN}\nUsing {Fore.CYAN}personal{Fore.GREEN} repositories.{Style.RESET_ALL}"
+                        f"{Fore.GREEN}\nFetching {Fore.CYAN}personal{Fore.GREEN} "
+                        f"repositories (owned by you).{Style.RESET_ALL}"
                     )
+                    repositories = github.list_owned_repositories(limit=args.limit)
             else:
                 print(
                     f"{Fore.YELLOW}\nNo organizations found. Using personal repositories.{Style.RESET_ALL}"
                 )
-
-        # Fetch repositories based on selection
-        if org_name:
-            repositories = github.list_organization_repositories(org_name, limit=args.limit)
-        else:
-            repositories = github.list_user_repositories(limit=args.limit)
+                repositories = github.list_owned_repositories(limit=args.limit)
 
         # Display repository summary
         display_repository_summary(repositories)

@@ -25,8 +25,11 @@ python main.py --languages
 # Save repository data to a JSON file
 python main.py --output repos.json
 
-# List only personal repositories (skip organization selection)
+# List only repositories you own (skip organization selection)
 python main.py --personal
+
+# List all repositories you have access to (including collaborations)
+python main.py --all
 
 # List repositories for a specific organization
 python main.py --org your-org-name
@@ -38,7 +41,11 @@ python main.py --limit 5
 By default, the script will:
 1. List your organizations
 2. Ask you to select which organization's repositories to list (or your personal repos)
-3. Show those repositories sorted by popularity (stars + watchers)
+3. If personal repositories are selected, show only repositories you own (not collaborations)
+4. Show those repositories sorted by popularity (stars + watchers), including:
+   - Repository name and description
+   - Programming language, star count, fork count, and size
+   - Human-readable relative times for when repositories were updated and created ("2 days ago" vs date)
 
 # Development Setup
 
